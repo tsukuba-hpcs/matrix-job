@@ -32,7 +32,9 @@ fn load_config(path: Option<PathBuf>) -> anyhow::Result<Config> {
     };
     let config = serde_yaml::from_str(&fs::read_to_string(&path)?)?;
     if let Some(parent) = path.parent() {
-        std::env::set_current_dir(parent)?;
+        if parent.as_os_str() != "" {
+            std::env::set_current_dir(parent)?;
+        }
     }
     Ok(config)
 }
