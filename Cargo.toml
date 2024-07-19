@@ -1,0 +1,10 @@
+[package]
+name = "matrix-job"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { version = "1.0.86", features = ["backtrace"] }
+clap = { version = "4.5.9", features = ["derive", "env"] }
+serde = { version = "1.0.204", features = ["derive"] }
+serde_yaml = "0.9.34"
