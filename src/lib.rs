@@ -97,6 +97,7 @@ pub fn render_template(
         for global in globals {
             let contents = contents_template.render(&global)?;
             let path = path_tempalte.render(&global)?;
+            debug!(path, "render");
             let path = PathBuf::from(path);
             if let Some(parent) = path.parent() {
                 fs::create_dir_all(parent)?;
@@ -129,7 +130,10 @@ pub fn execute(matrix: &ExpandedMatrix<liquid::model::Value>, command: &str) -> 
         let env = liquid::model::Object::from_iter(env);
         let command = LIQUID_PARSER.parse(command)?.render(&env)?;
         debug!(command, "exec");
-        let out = std::process::Command::new(command).output()?;
+        let out = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .output()?;
         if !out.status.success() {
             let stderr = String::from_utf8_lossy(&out.stderr);
             let stdout = String::from_utf8_lossy(&out.stdout);
