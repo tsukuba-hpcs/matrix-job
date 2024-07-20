@@ -8,6 +8,7 @@ use matrix_job::conv::{convert_matrix, to_liquid_model};
 enum SubCommand {
     List,
     Render { job: String },
+    Run { job: String },
 }
 
 #[derive(clap::Parser)]
@@ -40,6 +41,11 @@ fn load_config(path: Option<PathBuf>) -> anyhow::Result<Config> {
 }
 
 fn main() -> anyhow::Result<()> {
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer())
+        .init();
     let opts = Opts::parse();
     let config = load_config(opts.config.clone())?;
     match opts.cmd {
@@ -56,6 +62,17 @@ fn main() -> anyhow::Result<()> {
             let matrix = matrix_job::matrix(&job.matrix);
             let matrix = convert_matrix(matrix, to_liquid_model)?;
             matrix_job::render(&matrix, &job.templates)?;
+        }
+        SubCommand::Run { job: job_name } => {
+            let job = config
+                .get(&job_name)
+                .with_context(|| format!("job {job_name} not found"))?;
+            let matrix = matrix_job::matrix(&job.matrix);
+            let matrix = convert_matrix(matrix, to_liquid_model)?;
+            matrix_job::render(&matrix, &job.templates)?;
+            if let Some(command) = &job.command {
+                matrix_job::execute(&matrix, command)?;
+            }
         }
     }
     Ok(())

@@ -3,6 +3,7 @@ use std::{collections::HashMap, fs, path::PathBuf, str::FromStr};
 use liquid::model::KString;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 pub type ExpandedMatrix<T> = Vec<HashMap<String, T>>;
 pub type MatrixDefinition = HashMap<String, Vec<serde_yaml::Value>>;
@@ -111,6 +112,31 @@ pub fn render(
 ) -> anyhow::Result<()> {
     for template in templates {
         render_template(matrix, template)?;
+    }
+    Ok(())
+}
+
+pub fn execute(matrix: &ExpandedMatrix<liquid::model::Value>, command: &str) -> anyhow::Result<()> {
+    for env in matrix {
+        let env = env
+            .into_iter()
+            .map(|(k, v)| {
+                let k = KString::from_str(k)?;
+                Ok::<_, anyhow::Error>((k, v.clone()))
+            })
+            .collect::<Result<HashMap<_, _>, _>>()?;
+        let env = liquid::model::Object::from_iter(env);
+        let command_str = LIQUID_PARSER.parse(command)?.render(&env)?;
+        let out = std::process::Command::new(command_str).output()?;
+        if !out.status.success() {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            error!(
+                stdout = stdout.as_ref(),
+                stderr = stderr.as_ref(),
+                "command error"
+            );
+        }
     }
     Ok(())
 }
