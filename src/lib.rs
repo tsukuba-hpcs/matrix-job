@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, path::PathBuf, str::FromStr};
 use liquid::model::KString;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{debug, error};
 
 pub type ExpandedMatrix<T> = Vec<HashMap<String, T>>;
 pub type MatrixDefinition = HashMap<String, Vec<serde_yaml::Value>>;
@@ -87,6 +87,7 @@ pub fn render_template(
         });
         let contents = contents_template.render(&global)?;
         let path = path_tempalte.render(&global)?;
+        debug!(path, "render");
         let path = PathBuf::from(path);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
@@ -126,8 +127,9 @@ pub fn execute(matrix: &ExpandedMatrix<liquid::model::Value>, command: &str) -> 
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
         let env = liquid::model::Object::from_iter(env);
-        let command_str = LIQUID_PARSER.parse(command)?.render(&env)?;
-        let out = std::process::Command::new(command_str).output()?;
+        let command = LIQUID_PARSER.parse(command)?.render(&env)?;
+        debug!(command, "exec");
+        let out = std::process::Command::new(command).output()?;
         if !out.status.success() {
             let stderr = String::from_utf8_lossy(&out.stderr);
             let stdout = String::from_utf8_lossy(&out.stdout);
