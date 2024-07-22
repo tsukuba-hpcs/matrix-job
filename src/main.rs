@@ -70,9 +70,7 @@ fn main() -> anyhow::Result<()> {
             let matrix = matrix_job::matrix(&job.matrix);
             let matrix = convert_matrix(matrix, to_liquid_model, &job.filter)?;
             matrix_job::render(&matrix, &job.templates)?;
-            if let Some(command) = &job.command {
-                matrix_job::execute(&matrix, command)?;
-            }
+            matrix_job::execute(&matrix, &job.commands)?;
         }
     }
     Ok(())

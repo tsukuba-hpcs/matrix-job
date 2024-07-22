@@ -25,7 +25,8 @@ pub struct Template {
 pub struct Job {
     #[serde(default)]
     pub matrix: MatrixDefinition,
-    pub command: Option<String>,
+    #[serde(default)]
+    pub commands: Vec<String>,
     #[serde(default)]
     pub templates: Vec<Template>,
     pub filter: Option<String>,
@@ -119,7 +120,10 @@ pub fn render(
     Ok(())
 }
 
-pub fn execute(matrix: &ExpandedMatrix<liquid::model::Value>, command: &str) -> anyhow::Result<()> {
+pub fn execute(
+    matrix: &ExpandedMatrix<liquid::model::Value>,
+    commands: &[String],
+) -> anyhow::Result<()> {
     for env in matrix {
         let env = env
             .into_iter()
@@ -129,20 +133,22 @@ pub fn execute(matrix: &ExpandedMatrix<liquid::model::Value>, command: &str) -> 
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
         let env = liquid::model::Object::from_iter(env);
-        let command = LIQUID_PARSER.parse(command)?.render(&env)?;
-        debug!(command, "exec");
-        let out = std::process::Command::new("sh")
-            .arg("-c")
-            .arg(command)
-            .output()?;
-        if !out.status.success() {
-            let stderr = String::from_utf8_lossy(&out.stderr);
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            error!(
-                stdout = stdout.as_ref(),
-                stderr = stderr.as_ref(),
-                "command error"
-            );
+        for command in commands {
+            let command = LIQUID_PARSER.parse(command)?.render(&env)?;
+            debug!(command, "exec");
+            let out = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .output()?;
+            if !out.status.success() {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                error!(
+                    stdout = stdout.as_ref(),
+                    stderr = stderr.as_ref(),
+                    "command error"
+                );
+            }
         }
     }
     Ok(())
