@@ -28,6 +28,7 @@ pub struct Job {
     pub command: Option<String>,
     #[serde(default)]
     pub templates: Vec<Template>,
+    pub filter: Option<String>,
 }
 
 fn extend(

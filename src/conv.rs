@@ -1,6 +1,7 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use anyhow::{bail, Context};
+use itertools::Itertools;
 use liquid::model::KString;
 
 use crate::ExpandedMatrix;
@@ -84,22 +85,53 @@ pub fn to_liquid_model(value: serde_yaml::Value) -> anyhow::Result<liquid::model
     })
 }
 
+fn convert_map<F, T>(
+    mapping: HashMap<String, serde_yaml::Value>,
+    convert: F,
+) -> anyhow::Result<HashMap<String, T>>
+where
+    F: Fn(serde_yaml::Value) -> anyhow::Result<T>,
+{
+    mapping
+        .into_iter()
+        .map(|(k, v)| {
+            let v = convert(v)?;
+            Ok::<_, anyhow::Error>((k, v))
+        })
+        .collect()
+}
+
 pub fn convert_matrix<F, T>(
     matrix: ExpandedMatrix<serde_yaml::Value>,
     convert: F,
+    filter: &Option<String>,
 ) -> anyhow::Result<ExpandedMatrix<T>>
 where
     F: Fn(serde_yaml::Value) -> anyhow::Result<T>,
 {
-    matrix
+    let matrix = matrix
         .into_iter()
         .map(|env| {
-            env.into_iter()
-                .map(|(k, v)| {
-                    let v = convert(v)?;
-                    Ok::<_, anyhow::Error>((k, v))
-                })
-                .collect()
+            if let Some(filter) = filter {
+                let json_model = env
+                    .clone()
+                    .into_iter()
+                    .map(|(k, v)| to_json_model(v).map(|v| (k, v)));
+                let json_model = serde_json::Value::Object(json_model.collect::<Result<_, _>>()?);
+                if zen_expression::evaluate_expression(filter, &json_model)?
+                    == serde_json::Value::Bool(true)
+                {
+                    Ok(Some(convert_map(env, &convert)?))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Ok(Some(convert_map(env, &convert)?))
+            }
         })
-        .collect()
+        .collect::<anyhow::Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect_vec();
+    Ok(matrix)
 }

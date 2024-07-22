@@ -490,6 +490,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -546,7 +555,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3aef4b2160791f456eb880c990a97746f693746f92302ef5f1d06111cf14b768"
 dependencies = [
  "anymap2",
- "itertools",
+ "itertools 0.12.1",
  "kstring",
  "liquid-derive",
  "num-traits",
@@ -574,7 +583,7 @@ version = "0.26.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f48fc446873f74d869582f5c4b8cbf3248c93395e410a67af5809b3731e44a"
 dependencies = [
- "itertools",
+ "itertools 0.12.1",
  "liquid-core",
  "once_cell",
  "percent-encoding",
@@ -604,6 +613,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "itertools 0.13.0",
  "liquid",
  "once_cell",
  "serde",
